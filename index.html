@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級聯絡簿產生器</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap');
+
+        :root {
+            --board-bg: #1a4731;
+            --board-frame: #8d5e2f;
+            --chalk-white: #f0f0f0;
+            --chalk-yellow: #f4d03f;
+            --chalk-pink: #f1948a;
+            --chalk-blue: #85c1e9;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            font-family: 'Zen Maru Gothic', '微軟正黑體', sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .blackboard {
+            background-color: var(--board-bg);
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 60%);
+            width: 100%;
+            max-width: 1200px;
+            border: 12px solid var(--board-frame);
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3), inset 0 0 40px rgba(0,0,0,0.5);
+            padding: 20px 30px;
+            color: var(--chalk-white);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .chalk-tray {
+            position: absolute;
+            bottom: -22px;
+            left: 50px;
+            right: 50px;
+            height: 15px;
+            background: #704620;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            box-shadow: 0 5px 5px rgba(0,0,0,0.2);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            color: var(--chalk-yellow);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+
+        .date-control-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chalk-date-picker {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+            color: var(--chalk-yellow);
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-size: 1.1rem;
+            padding: 4px 10px;
+            outline: none;
+            cursor: pointer;
+            color-scheme: dark;
+        }
+
+        .date-display {
+            font-size: 1.4rem;
+            color: var(--chalk-pink);
+            font-weight: bold;
+        }
+
+        .board-content {
+            display: grid;
+            grid-template-columns: 1.15fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .column {
+            padding: 0 10px;
+            border-right: 2px dashed rgba(255,255,255,0.3);
+            box-sizing: border-box;
+        }
+
+        .column:last-child {
+            border-right: none;
+        }
+
+        .category-title {
+            font-size: 1.7rem;
+            color: var(--chalk-yellow);
+            text-align: center;
+            margin-bottom: 14px;
+            text-decoration: underline;
+            text-underline-offset: 5px;
+            text-decoration-color: rgba(255,255,255,0.5);
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 6px;
+        }
+
+        .input-label {
+            font-size: 1.1rem;
+            white-space: nowrap;
+            margin-right: 2px;
+            min-width: 80px;
+        }
+
+        .chalk-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid rgba(255,255,255,0.6);
+            color: var(--chalk-white);
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-size: 1.05rem;
+            flex: 1;
+            padding: 2px 5px;
+            outline: none;
+            min-width: 70px;
+        }
+
+        .chalk-input::placeholder {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.85rem;
+        }
+
+        .chalk-input:focus {
+            border-bottom-color: var(--chalk-yellow);
+        }
+
+        .select-wrapper {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .chalk-select {
+            background-color: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+            color: var(--chalk-yellow);
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-size: 0.9rem;
+            padding: 3px 2px;
+            outline: none;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .chalk-select:focus {
+            border-color: var(--chalk-yellow);
+        }
+
+        .chalk-select option, .chalk-select optgroup {
+            background-color: #1a4731;
+            color: var(--chalk-white);
+        }
+
+        .section-divider {
+            margin-top: 18px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.25);
+        }
+
+        .bottom-section {
+            margin-top: 25px;
+            padding-top: 18px;
+            border-top: 2px dashed rgba(255, 255, 255, 0.4);
+            display: grid;
+            grid-template-columns: 1fr 1.6fr;
+            gap: 25px;
+        }
+
+        .bottom-block {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 15px 18px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .actions {
+            margin-top: 30px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .btn {
+            background: transparent;
+            border: 3px solid var(--chalk-white);
+            color: var(--chalk-white);
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            border-color: var(--chalk-yellow);
+            color: var(--chalk-yellow);
+        }
+
+        .btn-submit:hover {
+            background-color: rgba(244, 208, 63, 0.2);
+            transform: scale(1.05);
+        }
+
+        .btn-reset {
+            border-color: var(--chalk-pink);
+            color: var(--chalk-pink);
+        }
+
+        .btn-reset:hover {
+            background-color: rgba(241, 148, 138, 0.2);
+            transform: scale(1.05);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal {
+            background: var(--board-bg);
+            border: 4px solid var(--board-frame);
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            color: var(--chalk-white);
+            position: relative;
+        }
+
+        .modal h2 {
+            color: var(--chalk-yellow);
+            text-align: center;
+            margin-top: 0;
+        }
+
+        .result-area {
+            background: rgba(0,0,0,0.25);
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 1.3rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            min-height: 150px;
+        }
+
+        .copy-btn {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            background: var(--chalk-blue);
+            color: #333;
+            border: none;
+            padding: 10px;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            color: #aaa;
+            cursor: pointer;
+        }
+
+        @media (max-width: 950px) {
+            .board-content {
+                grid-template-columns: 1fr;
+            }
+            .column {
+                border-right: none;
+                border-bottom: 2px dashed rgba(255,255,255,0.3);
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+            }
+            .bottom-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="blackboard">
+    <header>
+        <h1>聯絡簿功課</h1>
+        <div class="date-control-area">
+            <span style="font-size: 1.1rem;">選擇日期：</span>
+            <input type="date" id="homeworkDatePicker" class="chalk-date-picker" onchange="onDateChange(this.value)">
+            <span class="date-display" id="dateDisplay">載入中...</span>
+        </div>
+    </header>
+
+    <div class="board-content">
+        
+        <!-- 第一欄：國語 -->
+        <div class="column">
+            <div class="category-title">國語</div>
+            
+            <div class="input-group">
+                <span class="input-label">國習</span>
+                <input type="text" class="chalk-input" data-key="chinese-workbook" placeholder="範圍(頁)">
+            </div>
+            
+            <div class="input-group">
+                <span class="input-label">國圈詞</span>
+                <div class="select-wrapper">
+                    <select class="chalk-select" data-key="chinese-terms-lesson">
+                        <option value="">課別</option>
+                        <option value="第1課">第1課</option><option value="第2課">第2課</option>
+                        <option value="第3課">第3課</option><option value="第4課">第4課</option>
+                        <option value="第5課">第5課</option><option value="第6課">第6課</option>
+                        <option value="第7課">第7課</option><option value="第8課">第8課</option>
+                        <option value="第9課">第9課</option><option value="第10課">第10課</option>
+                        <option value="第11課">第11課</option><option value="第12課">第12課</option>
+                    </select>
+                    <select class="chalk-select" data-key="chinese-terms-book">
+                        <option value="">本子</option>
+                        <option value="格甲">格甲</option>
+                        <option value="格乙">格乙</option>
+                    </select>
+                    <select class="chalk-select" data-key="chinese-terms-count">
+                        <option value="">次數</option>
+                        <option value="1次">1次</option>
+                        <option value="2次">2次</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">國例詞</span>
+                <div class="select-wrapper">
+                    <select class="chalk-select" data-key="chinese-example-lesson">
+                        <option value="">課別</option>
+                        <option value="第1課">第1課</option><option value="第2課">第2課</option>
+                        <option value="第3課">第3課</option><option value="第4課">第4課</option>
+                        <option value="第5課">第5課</option><option value="第6課">第6課</option>
+                        <option value="第7課">第7課</option><option value="第8課">第8課</option>
+                        <option value="第9課">第9課</option><option value="第10課">第10課</option>
+                        <option value="第11課">第11課</option><option value="第12課">第12課</option>
+                    </select>
+                    <select class="chalk-select" data-key="chinese-example-book">
+                        <option value="">本子</option>
+                        <option value="格甲">格甲</option>
+                        <option value="格乙">格乙</option>
+                    </select>
+                    <select class="chalk-select" data-key="chinese-example-count">
+                        <option value="">次數</option>
+                        <option value="1次">1次</option>
+                        <option value="2次">2次</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">國卷</span>
+                <input type="text" class="chalk-input" data-key="chinese-quiz" placeholder="幾張">
+            </div>
+            
+            <div class="input-group">
+                <span class="input-label">成語學單</span>
+                <input type="text" class="chalk-input" data-key="idiom-sheet" placeholder="內容">
+            </div>
+            
+            <div class="input-group">
+                <span class="input-label">中英文閱讀</span>
+                <input type="text" class="chalk-input" data-key="reading-sheet" placeholder="範圍(頁)">
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">小短文</span>
+                <input type="text" class="chalk-input" data-key="short-essay" placeholder="題目">
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">生字甲本</span>
+                <input type="text" class="chalk-input" data-key="char-book-a" placeholder="範圍(頁)">
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">生字乙本</span>
+                <input type="text" class="chalk-input" data-key="char-book-b" placeholder="範圍(頁)">
+            </div>
+        </div>
+
+        <!-- 第二欄：數學 & 社會 -->
+        <div class="column">
+            <div class="category-title">數學</div>
+            <div class="input-group"><span class="input-label">數習</span><input type="text" class="chalk-input" data-key="math-workbook" placeholder="範圍(頁)"></div>
+            <div class="input-group"><span class="input-label">數隨堂</span><input type="text" class="chalk-input" data-key="math-practice" placeholder="範圍"></div>
+            <div class="input-group"><span class="input-label">數作簿</span><input type="text" class="chalk-input" data-key="math-homework" placeholder="範圍"></div>
+            <div class="input-group"><span class="input-label">數卷</span><input type="text" class="chalk-input" data-key="math-quiz" placeholder="幾張"></div>
+            <div class="input-group"><span class="input-label">數課</span><input type="text" class="chalk-input" data-key="math-textbook" placeholder="範圍"></div>
+
+            <div class="section-divider">
+                <div class="category-title">社會</div>
+                <div class="input-group"><span class="input-label">社習</span><input type="text" class="chalk-input" data-key="society-workbook" placeholder="範圍(頁)"></div>
+                <div class="input-group"><span class="input-label">社作簿</span><input type="text" class="chalk-input" data-key="society-homework" placeholder="範圍"></div>
+                <div class="input-group"><span class="input-label">社卷</span><input type="text" class="chalk-input" data-key="society-quiz" placeholder="幾張"></div>
+            </div>
+        </div>
+
+        <!-- 第三欄：英文 & 自然 -->
+        <div class="column">
+            <div class="category-title">英文</div>
+            <div class="input-group"><span class="input-label">英習</span><input type="text" class="chalk-input" data-key="english-workbook" placeholder="範圍(頁)"></div>
+            <div class="input-group"><span class="input-label">英卷</span><input type="text" class="chalk-input" data-key="english-quiz" placeholder="幾張"></div>
+            
+            <div class="section-divider">
+                <div class="category-title">自然</div>
+                <div class="input-group"><span class="input-label">自然習</span><input type="text" class="chalk-input" data-key="nature-workbook" placeholder="範圍(頁)"></div>
+                <div class="input-group"><span class="input-label">自作簿</span><input type="text" class="chalk-input" data-key="nature-homework" placeholder="範圍"></div>
+                <div class="input-group"><span class="input-label">自卷</span><input type="text" class="chalk-input" data-key="nature-quiz" placeholder="幾張"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部獨立專區：明日提醒 與 老師的話 -->
+    <div class="bottom-section">
+        <div class="bottom-block">
+            <div class="category-title" style="font-size: 1.5rem; margin-bottom: 10px;">明日提醒</div>
+            <div class="input-group">
+                <span class="input-label">明帶</span>
+                <input type="text" class="chalk-input" data-key="bring-tomorrow" placeholder="學用品/用具">
+            </div>
+            <div class="input-group">
+                <span class="input-label">明考</span>
+                <input type="text" class="chalk-input" data-key="exam-tomorrow" placeholder="科目/範圍">
+            </div>
+        </div>
+
+        <div class="bottom-block">
+            <div class="category-title" style="font-size: 1.5rem; margin-bottom: 10px;">老師的話</div>
+            <div class="input-group" style="margin-bottom: 8px;">
+                <span class="input-label">選擇天數</span>
+                <select class="chalk-select" id="teacherNoteSelect" data-key="teacher-note-select" onchange="onTeacherNoteSelect(this.value)">
+                    <option value="">-- 請選擇天數 (1-100天) --</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <input type="text" class="chalk-input" id="teacherNoteInput" data-key="teacher-note-text" placeholder="選取天數後帶入，亦可手動修改...">
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-reset" onclick="resetForm(this)">清除重填</button>
+        <button class="btn btn-submit" onclick="generateHomework()">完成鈕</button>
+    </div>
+    
+    <div class="chalk-tray"></div>
+</div>
+
+<!-- 結果彈出視窗 -->
+<div class="modal-overlay" id="resultModal">
+    <div class="modal">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2 id="modalTitle">今日聯絡簿</h2>
+        <div class="result-area" id="resultText"></div>
+        <button class="copy-btn" id="actionBtn" onclick="copyText()">複製文字</button>
+    </div>
+</div>
+
+<script>
+    const teacherNotesData = [
+        { phase: "第一階段：探索與起步（第 1 - 20 天）", quotes: [
+            "每一趟精彩的旅程，都從邁出第一步開始。帶著好奇心出發，今天會發現新驚喜。",
+            "晨光正好，微笑是最好的見面禮。給身邊的同學一個招呼，開啟活力滿滿的一天。",
+            "課本裡的知識像藏寶圖，等待你去解鎖。只要專心聆聽，就能找到思考的寶藏。",
+            "做好一件小事，就是進步的起點。把桌子整理乾淨，心裡也會跟著清爽明亮。",
+            "勇敢舉手發言，代表你在認真思考。每一次表達，都是自信心生長的養分。",
+            "學習就像長跑，起跑平穩最重要。找到自己的節奏，一步一步踏實向前。",
+            "每天早起準時進教室，就是送給自己最好的自律禮物。你展現了優秀的責任感。",
+            "遇到不懂的問題，主動發問是最棒的勇氣。老師和同學永遠樂意與你一同探討。",
+            "操場上的汗水，見證著體能的成長。熱愛運動的孩子，心胸也會無比開朗。",
+            "用心寫下的每一個字，都在累積你的專注力。靜下心來，你會看見筆尖的力量。",
+            "試著多欣賞同桌同學的一個優點。當你懂得看見別人的好，自己也會變得更棒。",
+            "做好暖身運動，能保護身體並迎接挑戰。學習也是如此，做好課前預習會更輕鬆。",
+            "今天的你比昨天更懂得主動幫忙了。這份體貼，讓整個班級充滿溫暖。",
+            "閱讀能帶你走遍世界。挑一本喜歡的好書，享受沉浸在文字裡的片刻吧。",
+            "好的習慣就像存錢，每天存一點，未來會擁有大財富。從按時完成作業開始累積。",
+            "遇到難解的數學題，就像解開一道有趣的謎題。冷靜拆解步驟，答案就在眼前。",
+            "保持充沛的體力，需要充足的睡眠與營養。照顧好自己的身體，是學習的第一步。",
+            "觀察自然界的小細節，會發現萬物都有獨特的美。保持敏銳的眼光探索世界。",
+            "感謝每天為我們默默付出的家人與師長。一句真誠的「謝謝」，擁有強大的力量。",
+            "第一個二十天過去了，你正穩健成長。拍拍自己的肩膀，為這段起步喝采。"
+        ]},
+        { phase: "第二階段：堅持與自律（第 21 - 40 天）", quotes: [
+            "當新鮮感漸漸褪去，堅持就是最耀眼的光芒。穩住步伐，你正在打造強大的內心。",
+            "球場上的每一次精準發球，都來自成百上千次的練習。基本功越穩，表現越出色。",
+            "專注於當下的四十分鐘課堂。心無旁騖，你會發現學習效率大幅提升。",
+            "把複雜的目標切成每日小任務。每天完成一點點，大目標自然迎刃而解。",
+            "累的時候可以適度深呼吸調整節奏。休息過後，帶著清晰的頭腦繼續前行。",
+            "規律的作息是維持好狀態的關鍵。掌控好時間的人，就是自己生活的主人。",
+            "重複的動作雖然樸實，卻是通往卓越的必經之路。耐住性子，基本功會回饋你。",
+            "看到你主動收好器材、擺正桌椅，老師感到很欣慰。細節處處顯現一個人的修養。",
+            "自律不是限制，而是帶你前往更高目標的羽翼。珍惜每一次自主練習的機會。",
+            "寫作是與自己心靈的對話。誠實記錄生活中的感受，文字會越來越有溫度。",
+            "跑道上的逆風，正好鍛鍊腿部的力量。學會迎風奔跑，你的耐力會更上一層樓。",
+            "今天作業裡的訂正做得很徹底。能把錯誤轉化為收穫，是最聰明的學習方式。",
+            "保持誠實與正直，即使沒有人看著也做正確的事。這是最珍貴的品格資產。",
+            "當你全神貫注於一件事情時，整個人都在發光。願你天天保有這份熱情。",
+            "早晨的集合迅速又有精神，展現了團隊的紀律。優良的紀律能成就偉大的團體。",
+            "練習時多流一滴汗，比賽時就多一份底氣。所有付出都在為勝利奠定基石。",
+            "用心聆聽師長與教練的指導。吸收建議並立刻調整，你會進步得比別人更快。",
+            "每天給自己設定一個具體的小挑戰。超越昨天的自己，就是最棒的勝利。",
+            "書寫整潔不僅讓版面美觀，也訓練了心性的穩定。繼續保持這份認真的態度。",
+            "走過四十天的自律旅程，好習慣已悄悄扎根。相信堅持的力量，它會帶你走得更遠。"
+        ]},
+        { phase: "第三階段：團隊與包容（第 41 - 60 天）", quotes: [
+            "一個人的力量有限，一群人的力量無窮。牽起隊友的手，我們能走得更遠。",
+            "在球場上，信任隊友才能打出最流暢的配合。一句「交給我」或「我來接」，就是最棒的默契。",
+            "聽懂別人的話，是溝通的第一步。試著站在同學的角度想問題，彼此會更靠近。",
+            "當隊友出現失誤時，及時給予擊掌和鼓勵。溫暖的支持能讓團隊迅速重振旗鼓。",
+            "班級是大家的家，需要每個人用心守護。主動承擔公共事務，讓環境更舒適。",
+            "每個同學都有獨特的專長與閃光點。學會欣賞多元的差異，世界會更加寬廣。",
+            "接力賽跑中最動人的，是那精準遞出的接力棒。傳遞信任，我們共同完成目標。",
+            "遇到爭執時，冷靜平和地溝通能化解一切。退一步的包容，展現的是大智慧。",
+            "看到你熱心教導同學解題，彼此都在進步。分享知識會讓智慧倍增。",
+            "團隊榮譽來自每個人的全力以赴。只要每個人都守好位置，我們就是無敵的隊伍。",
+            "掌聲要送給贏家，更要送給堅持到底的夥伴。展現運動家風度，格局更加開闊。",
+            "在小組合作中，積極發揮自己的優勢。集思廣益能激盪出最棒的創意成果。",
+            "說話是一門藝術，溫和而堅定的語氣最有說服力。用好話傳遞正向能量。",
+            "今天的打掃時間大家配合得天衣無縫。團結合作讓繁重的工作變得輕鬆愉快。",
+            "尊重不同意見，是邁向成熟的重要標誌。在討論中學會傾聽與整合。",
+            "隊長的責任是引領，隊員的責任是支持。大家心往一處想，團隊就能克服難關。",
+            "感謝那些在背後默默為團隊付出的同學。你們的細心，是團隊運轉的基石。",
+            "寬容對待別人的無心之過，也溫柔包容自己的不足。讓班級成為最安心的避風港。",
+            "一起經歷過汗水與笑聲的同窗情誼最為純粹。珍惜身邊這群並肩作戰的夥伴。",
+            "六十天的相處，我們打造了堅固的團隊默契。帶著這份向心力，勇敢迎接新挑戰。"
+        ]},
+        { phase: "第四階段：挫折與韌性（第 61 - 80 天）", quotes: [
+            "跌倒了拍拍灰塵站起來，那是成長的印記。每一道傷痕，都將成為堅硬的鎧甲。",
+            "考試成績只是檢驗學習的工具，不是定義你的標準。看清漏洞並補強，就是最大收穫。",
+            "比賽有贏有輸，最重要的是過程中的拼勁與學習。昂起頭來，下次我們會更強大。",
+            "當事情不如預期時，正是鍛鍊心理素質的時刻。保持冷靜，尋找解決方案。",
+            "彈簧被壓得越深，彈起的高度就越高。把阻力當成蓄力的過程，期待你的爆發。",
+            "允許自己偶爾有情緒，但別忘了找方法釋放。去操場跑兩圈，流汗會帶走煩惱。",
+            "失敗並不可怕，它是成功路上最重要的老師。從中總結經驗，你離目標更近了。",
+            "遇到瓶頸期代表你即將迎來突破。維持日常的訓練量，突破往往就在下一秒。",
+            "只要終點線還沒到，比賽就尚未結束。堅持到最後一秒，奇蹟往往在此刻誕生。",
+            "面對嚴厲的指正，聽取其中對自己有益的建議。能虛心受教的人，成長最為迅速。",
+            "陰雨天過後，天空會顯得格外蔚藍。調整好心態，陽光很快就會灑落。",
+            "不與別人比較起點，只專注於自己每天的提升。你的每一步努力都算數。",
+            "壓力是激發潛能的催化劑。告訴自己「我可以做到」，內心會湧現力量。",
+            "做錯了事，勇敢承認並承擔責任。負責任的態度會贏得所有人真正的尊重。",
+            "困難像是一座高山，攀登雖然辛苦，山頂的風景卻無比壯麗。一步一腳印往上走。",
+            "給疲憊的心靈充充電，聽聽音樂、看看遠方。充飽電後，我們更有力量出發。",
+            "每一位優秀的運動員，都經歷過無數次失利。韌性比天賦更能決定一個人能走多遠。",
+            "把批評轉化為前進的燃料。用行動和實力證明自己的價值。",
+            "今天的挫折是明天的故事，也是你成長的最佳養分。相信自己擁有克服一切的勇氣。",
+            "走過八十天的磨礪，你的眼神更加堅定。那份不輕言放棄的韌性，是你最珍貴的收穫。"
+        ]},
+        { phase: "第五階段：自信與收穫（第 81 - 100 天）", quotes: [
+            "經過長時間的淬鍊，你已經蛻變為更有擔當的少年。挺起胸膛，展現你的自信。",
+            "站在起跑線上，專注於呼吸與前方的路。相信平日累積的訓練，全力釋放能量。",
+            "你的進步大家都看在眼裡，這一切源於你不懈的努力。為自己的轉變感到驕傲吧。",
+            "閱讀積累了見識，運動強健了體魄。文武雙全的你，正在展現無限可能。",
+            "自信不是認為自己永遠不會輸，而是就算遇到挑戰也從不退縮。大膽迎接挑戰。",
+            "在考場上沈著應答，在賽場上果斷出擊。發揮平時的實力，你就是最棒的。",
+            "主動承擔起學長姊的榜樣責任。你的言行舉止，正在為學弟妹樹立良好典範。",
+            "珍惜收穫果實的喜悅，同時保持謙遜的心態。山外有山，我們繼續向更高處邁進。",
+            "今天你在講台上/賽場上的表現令人刮目相看。這份光彩是日夜苦練的最佳回饋。",
+            "回顧起點，你已經跨越了無數難關。這份成就感，是任何人都拿不走的禮物。",
+            "善用你的能力去幫助需要支持的同學。能夠照亮別人的人，自己的世界也會一片光明。",
+            "保持對知識的渴求與對運動的熱愛。這兩樣寶物將伴隨你一生成長。",
+            "感謝那個從不輕言放棄的自己。因為你的堅持，才成就了今天出色的模樣。",
+            "舞台已經搭好，盡情展現你的才華。無論結果如何，全力以赴就無怨無悔。",
+            "懂得感恩的人，走得最穩、飛得最高。把心中的感謝化作對未來的積極動力。",
+            "倒數的每一天都要加倍珍惜。把這份認真與專注，延續到未來的每個人生階段。",
+            "團隊因為有你的存在而更加完整與強大。感謝你為班級付出的一切心力。",
+            "展翅高飛的時刻即將到來，你已具備強健的翅膀。勇敢迎向更廣闊的天空吧。",
+            "保持初心，永遠對生活充滿熱情與好奇。無論走到哪裡，都做一個溫暖而有力量的人。",
+            "一百天的堅持，你交出了一張無比亮眼的成績單。老師為你感到無比驕傲，繼續勇敢追夢！"
+        ]}
+    ];
+
+    let currentDateKey = "";
+
+    function initTeacherNotes() {
+        const select = document.getElementById('teacherNoteSelect');
+        let dayCounter = 1;
+
+        teacherNotesData.forEach(group => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = group.phase;
+
+            group.quotes.forEach(quote => {
+                const opt = document.createElement('option');
+                opt.value = quote;
+                opt.textContent = `第 ${dayCounter} 天：${quote.substring(0, 16)}...`;
+                optgroup.appendChild(opt);
+                dayCounter++;
+            });
+
+            select.appendChild(optgroup);
+        });
+    }
+
+    function onTeacherNoteSelect(quote) {
+        document.getElementById('teacherNoteInput').value = quote;
+        saveCurrentDateData();
+    }
+
+    function updateDateDisplay(dateStr) {
+        if (!dateStr) return "";
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return "";
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        const dateObj = new Date(year, month - 1, day);
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        const dayName = days[dateObj.getDay()];
+
+        document.getElementById('dateDisplay').innerText = `${month}月${day}日 (${dayName})`;
+        return `${month}/${day}`;
+    }
+
+    function clearFormInputs() {
+        document.querySelectorAll('.chalk-input').forEach(input => input.value = '');
+        document.querySelectorAll('.chalk-select').forEach(select => select.selectedIndex = 0);
+    }
+
+    function saveCurrentDateData() {
+        if (!currentDateKey) return;
+        const dataObj = {};
+        document.querySelectorAll('[data-key]').forEach(el => {
+            const key = el.getAttribute('data-key');
+            dataObj[key] = el.value;
+        });
+        localStorage.setItem(`hw_data_${currentDateKey}`, JSON.stringify(dataObj));
+    }
+
+    function loadDateData(dateStr) {
+        clearFormInputs();
+        currentDateKey = dateStr;
+        const savedData = localStorage.getItem(`hw_data_${dateStr}`);
+        if (savedData) {
+            try {
+                const dataObj = JSON.parse(savedData);
+                document.querySelectorAll('[data-key]').forEach(el => {
+                    const key = el.getAttribute('data-key');
+                    if (dataObj[key] !== undefined) {
+                        el.value = dataObj[key];
+                    }
+                });
+            } catch (e) {
+                console.error("載入失敗:", e);
+            }
+        }
+    }
+
+    function onDateChange(newDateStr) {
+        if (!newDateStr) return;
+        updateDateDisplay(newDateStr);
+        loadDateData(newDateStr);
+    }
+
+    function initDatePicker() {
+        const datePicker = document.getElementById('homeworkDatePicker');
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        
+        datePicker.value = todayStr;
+        currentDateKey = todayStr;
+        updateDateDisplay(todayStr);
+        loadDateData(todayStr);
+    }
+
+    function bindAutoSave() {
+        document.querySelectorAll('.chalk-input').forEach(input => {
+            input.addEventListener('input', saveCurrentDateData);
+        });
+        document.querySelectorAll('.chalk-select').forEach(select => {
+            select.addEventListener('change', saveCurrentDateData);
+        });
+    }
+
+    function generateHomework() {
+        saveCurrentDateData();
+
+        const groups = document.querySelectorAll('.input-group');
+        let outputList = [];
+        let count = 1;
+        let teacherNote = "";
+
+        groups.forEach(group => {
+            const labelEl = group.querySelector('.input-label');
+            const textInput = group.querySelector('.chalk-input');
+            const selects = group.querySelectorAll('.chalk-select');
+
+            if (textInput && textInput.id === 'teacherNoteInput') {
+                teacherNote = textInput.value.trim();
+                return;
+            }
+
+            if (!labelEl) return;
+            const subject = labelEl.innerText.trim();
+
+            if (textInput) {
+                let val = textInput.value.trim();
+                if (val) {
+                    if (subject === '小短文' && !val.includes('(') && !val.includes('（')) {
+                        val = `${val}(100字)`;
+                    }
+
+                    const isNumberRange = /^[\d\s\-,~～]+$/.test(val);
+                    const pagesSubjects = ['國習', '生字甲本', '生字乙本', '中英文閱讀', '數習', '英習', '自然習', '社習'];
+                    const papersSubjects = ['國卷', '數卷', '英卷', '自卷', '社卷'];
+
+                    if (pagesSubjects.includes(subject) && isNumberRange) {
+                        val += "頁";
+                    } else if (papersSubjects.includes(subject) && isNumberRange) {
+                        val += "張";
+                    }
+
+                    if (subject === '明帶') {
+                        outputList.push(`${count}.明帶：${val}`);
+                    } else if (subject === '明考') {
+                        outputList.push(`${count}.明考：${val}`);
+                    } else if (subject === '小短文' || subject === '成語學單') {
+                        outputList.push(`${count}.${subject}：${val}`);
+                    } else {
+                        outputList.push(`${count}.${subject}${val}`);
+                    }
+                    count++;
+                }
+            } else if (selects.length > 0 && labelEl.id !== 'teacherNoteSelect') {
+                let parts = [];
+                selects.forEach(sel => {
+                    if (sel.value && sel.id !== 'teacherNoteSelect') parts.push(sel.value);
+                });
+                
+                if (parts.length > 0) {
+                    outputList.push(`${count}.${subject}${parts.join('')}`);
+                    count++;
+                }
+            }
+        });
+
+        const modalTitle = document.getElementById('modalTitle');
+        const resultText = document.getElementById('resultText');
+        const actionBtn = document.getElementById('actionBtn');
+        const modal = document.getElementById('resultModal');
+
+        if (outputList.length === 0 && !teacherNote) {
+            modalTitle.innerText = "提示";
+            resultText.innerText = "請至少填寫或選擇一項功課喔！";
+            actionBtn.style.display = 'none';
+            modal.style.display = 'flex';
+            return;
+        }
+
+        modalTitle.innerText = "今日聯絡簿";
+        const selectedDateStr = document.getElementById('homeworkDatePicker').value;
+        const datePrefix = updateDateDisplay(selectedDateStr);
+        let finalContent = `${datePrefix}聯絡簿功課為\n${outputList.join('\n')}`;
+        
+        if (teacherNote) {
+            finalContent += `\n\n📌 老師的話：${teacherNote}`;
+        }
+
+        resultText.innerText = finalContent;
+        actionBtn.innerText = "複製文字";
+        actionBtn.style.display = 'block';
+        modal.style.display = 'flex';
+    }
+
+    function resetForm(btn) {
+        clearFormInputs();
+        if (currentDateKey) {
+            localStorage.removeItem(`hw_data_${currentDateKey}`);
+        }
+        
+        const originalText = btn.innerText;
+        btn.innerText = "已清除！";
+        setTimeout(() => {
+            btn.innerText = originalText;
+        }, 1200);
+    }
+
+    function closeModal() {
+        document.getElementById('resultModal').style.display = 'none';
+    }
+
+    function copyText() {
+        const text = document.getElementById('resultText').innerText;
+        const btn = document.getElementById('actionBtn');
+        
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            btn.innerText = "已複製成功！";
+            btn.style.backgroundColor = "#82e0aa";
+            setTimeout(() => {
+                closeModal();
+                btn.innerText = "複製文字";
+                btn.style.backgroundColor = ""; 
+            }, 1000);
+        } catch (err) {
+            btn.innerText = "複製失敗，請手動複製";
+        }
+        document.body.removeChild(textarea);
+    }
+
+    initTeacherNotes();
+    initDatePicker();
+    bindAutoSave();
+</script>
+
+</body>
+</html>
